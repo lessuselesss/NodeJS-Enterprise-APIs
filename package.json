@@ -1,0 +1,22 @@
+{
+  "name": "circular-enterprise-apis",
+  "version": "1.0.0",
+  "description": "Official Circular Protocol Enterprise APIs",
+  "main": "lib/index.js",
+  "author": "Danny De Novi",
+  "license": "MIT",
+  "devDependencies": {
+  },
+  "type": "module",
+  "dependencies": {
+    "elliptic": "^6.6.1",
+    "node-fetch": "^3.3.2",
+    "sha256": "^0.2.0"
+  },
+  "exports": {
+    ".": {
+      "require": "./lib/index.cjs",
+      "import": "./lib/index.js"
+    }
+  }
+}
