@@ -5,6 +5,10 @@
   "main": "lib/index.js",
   "author": "Danny De Novi",
   "license": "MIT",
+  "scripts": {
+    "build:cjs": "webpack --config webpack.config.cjs.js",
+    "build:esm": "webpack --config webpack.config.esm.js",
+  }
   "devDependencies": {
   },
   "type": "module",
