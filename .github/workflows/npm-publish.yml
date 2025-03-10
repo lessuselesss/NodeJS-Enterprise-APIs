@@ -13,7 +13,6 @@ jobs:
         with:
           node-version: 20
       - run: npm ci
-      - run: npm run build #If there is a build step, add it here.
 
   publish-npm:
     needs: build
