@@ -1,12 +1,27 @@
 {
-  "name": "circular-enterprise-apis",
-  "version": "1.0.0",
-  "description": "Official Circular Protocol Enterprise APIs",
+  "name": "@circular-protocol/enterprise-apis",
+  "version": "1.0.1",
+  "description": "Official Circular Protocol Enterprise APIs for Node.js",
   "main": "lib/index.js",
   "author": "Danny De Novi",
   "license": "MIT",
-  "scripts": {
+  "keywords": [
+    "circular-protocol",
+    "blockchain",
+    "enterprise",
+    "api",
+    "node.js",
+    "certification",
+    "data-integrity"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/circular-protocol/NodeJS-Enterprise-APIs.git"
   },
+  "bugs": {
+    "url": "https://github.com/circular-protocol/NodeJS-Enterprise-APIs/issues"
+  },
+  "homepage": "https://github.com/circular-protocol/NodeJS-Enterprise-APIs#readme",
   "devDependencies": {
   },
   "type": "module",
