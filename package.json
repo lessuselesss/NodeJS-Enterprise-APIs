@@ -1,5 +1,5 @@
 {
-  "name": "@circular-protocol/enterprise-apis",
+  "name": "circular-enterprise-apis",
   "version": "1.0.1",
   "description": "Official Circular Protocol Enterprise APIs for Node.js",
   "main": "lib/index.js",
