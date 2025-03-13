@@ -40,7 +40,7 @@ async function run() {
             console.log("Report ", outcome);
             console.log(JSON.stringify(outcome));
 
-            if (outcome) {
+            if (outcome.Result === 200) {
                 txBlock = outcome.BlockID;
                 console.log("Transaction ID:", txID);
                 console.log("Transaction Block:", txBlock);
