@@ -22,8 +22,6 @@
     "url": "https://github.com/circular-protocol/NodeJS-Enterprise-APIs/issues"
   },
   "homepage": "https://github.com/circular-protocol/NodeJS-Enterprise-APIs#readme",
-  "devDependencies": {
-  },
   "type": "module",
   "dependencies": {
     "elliptic": "^6.6.1",
@@ -35,5 +33,15 @@
       "require": "./lib/index.cjs",
       "import": "./lib/index.js"
     }
+  },
+  "scripts": {
+    "test": "echo 'Use npm run test:esm or npm run test:cjs'",
+    "test:esm": "mocha \"__tests__/esm/**/*.mjs\"",
+    "test:cjs": "mocha \"__tests__/cjs/**/*.cjs\""
+  },
+  "devDependencies": {
+    "@types/chai": "^5.2.2",
+    "chai": "^5.2.0",
+    "mocha": "^11.5.0"
   }
 }
