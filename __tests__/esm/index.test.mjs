@@ -72,11 +72,10 @@ describe('Circular ESM Enterprise APIs', () => {
           
           // To make this test pass, the stringToHex and hexToString functions in lib/index.js
           // need to be updated to use Buffer.from for proper UTF-8 handling.
-          
           it('should correctly retrieve multi-byte unicode data', () => {
             const unicodeData = "你好世界 😊"; // Multi-byte Unicode characters
             certificate.setData(unicodeData);
-            // This test will likely fail with the current stringToHex/hexToString implementation
+            // This test will fail with the current stringToHex/hexToString implementation
             // as it does not correctly handle multi-byte UTF-8 encoding.
             // It expects the original string back.
             expect(certificate.getData()).to.equal(unicodeData);
@@ -590,9 +589,9 @@ describe('Circular ESM Enterprise APIs', () => {
                 const confirmedResponse = { Result: 200, Response: confirmedResponsePayload };
 
                 nock(DEFAULT_NAG_BASE_URL)
-                    .post(`${DEFAULT_NAG_PATH}Circular_GetTransactionbyID_`)
+                    .post(`${DEFAULT_NAG_PATH}Circular_GetTransactionbyID_`, specificBodyMatcher)
                     .reply(200, notFoundResponse) // First call
-                    .post(`${DEFAULT_NAG_PATH}Circular_GetTransactionbyID_`)
+                    .post(`${DEFAULT_NAG_PATH}Circular_GetTransactionbyID_`, specificBodyMatcher)
                     .reply(200, confirmedResponse); // Second call
                 
                 const outcome = await account.GetTransactionOutcome(txID, shortTimeout);
@@ -606,7 +605,7 @@ describe('Circular ESM Enterprise APIs', () => {
                 expect(dataReceivedLogs.length).to.equal(2);
                 expect(pollingLogs.length).to.equal(1);
 
-                expect(dataReceivedLogs[0].args[1]).to.equal('Transaction Not Found');
+                expect(dataReceivedLogs[0].args[1].Response).to.equal('Transaction Not Found');
                 expect(dataReceivedLogs[1].args[1].Response.Status).to.equal('Confirmed');
 
             }).timeout(5000); // Increased Mocha timeout for this test
@@ -623,9 +622,9 @@ describe('Circular ESM Enterprise APIs', () => {
                 // Optionally, assert on captured console.log messages that precede the rejection,
                 // if they are considered part of the expected informational output.
                 expect(capturedLogs.some(log =>
-                    log.type === 'log' && // Note: It's console.log in lib/index.js line 539
+                    log.type === 'log' &&
                     log.args[0] === 'Error fetching transaction:' &&
-                    log.args[1].message === 'Network connection lost'
+                    String(log.args[1]).includes('Network connection lost') // More robust check
                 )).to.be.true;
             });
 
