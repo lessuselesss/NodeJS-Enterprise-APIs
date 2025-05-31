@@ -28,6 +28,10 @@ const testPrivateKey = testKeyPair.getPrivate('hex');
 const testPublicKey = testKeyPair.getPublic('hex');
 const testAccountAddress = '0x' + sha256(testPublicKey).substring(0, 40);
 
+// Set the target network via an environment variable 
+// Example: "test:esm:testnet": "CIRCULAR_TEST_NETWORK=testnet mocha"
+const targetNetwork = process.env.CIRCULAR_TEST_NETWORK;
+
 describe('Circular ESM Enterprise APIs', () => {
 
     describe('C_CERTIFICATE Class', () => {
@@ -648,5 +652,132 @@ describe('Circular ESM Enterprise APIs', () => {
                 )).to.be.true;
             }).timeout(5000); // Increase Mocha timeout for this test
         });
+
+        // Tests for live network interactions ---
+        if (targetNetwork) {
+            describe(`CEP_Account Live Network Tests (against ${targetNetwork})`, function() {
+                // Increase Mocha timeout as live network calls can be slower
+                this.timeout(60000); // 60 seconds
+
+                let liveAccount;
+
+                beforeEach(async () => {
+                    liveAccount = new CEP_Account();
+                    // Disable nock for these live network tests
+                    if (nock.isActive()) {
+                        nock.restore(); // Use nock.restore() to disable mocking
+                        nock.cleanAll(); // Clear any pending mocks
+                    }
+                    console.log(`Configuring account for real '${targetNetwork}' network...`);
+                    await liveAccount.setNetwork(targetNetwork);
+                    liveAccount.open(testAccountAddress); // Open the account for tests
+                    console.log(`Account NAG_URL set to: ${liveAccount.NAG_URL}`);
+                });
+
+                afterEach(() => {
+                    // Re-enable nock after these live network tests
+                    if (!nock.isActive()) {
+                        nock.activate(); // Use nock.activate() to re-enable mocking
+                    }
+                    liveAccount.close();
+                });
+
+                it('should update account nonce on real network', async () => {
+                    // This test will hit the real network endpoint configured by setNetwork
+                    const success = await liveAccount.updateAccount();
+                    expect(success).to.be.true;
+                    // Expect nonce to be updated from a real network response
+                    expect(liveAccount.Nonce).to.be.greaterThan(0);
+                });
+
+                it('should submit a certificate and get its outcome on real network', async function() {
+                    // This test requires a longer timeout due to network latency and polling
+                    this.timeout(120000); // 120 seconds
+
+                    const certData = `Test data for ${targetNetwork} - ${new Date().toISOString()}`;
+                    const privateKey = testPrivateKey; // Use your test private key
+
+                    console.log(`Attempting to submit certificate to ${targetNetwork}...`);
+                    const submitResult = await liveAccount.submitCertificate(certData, privateKey);
+                    // We expect success: true and a transaction ID from the real network
+                    expect(submitResult.success).to.be.true;
+                    expect(submitResult.TxID).to.be.a('string').and.not.be.empty;
+                    console.log(`Certificate submitted. TxID: ${submitResult.TxID}`);
+
+                    const txID = submitResult.TxID;
+                    const outcomeTimeout = 60; // seconds for polling
+
+                    console.log(`Polling for transaction outcome for TxID: ${txID} on ${targetNetwork} (timeout: ${outcomeTimeout}s)`);
+                    const outcome = await liveAccount.GetTransactionOutcome(txID, outcomeTimeout);
+                    // Expect the transaction to be confirmed and have its data
+                    expect(outcome).to.not.be.null;
+                    expect(outcome.Status).to.equal('Confirmed');
+                    expect(outcome.id).to.equal(txID);
+                    console.log(`Transaction outcome confirmed for TxID: ${txID}`);
+                });
+
+                it('should fetch a transaction by ID on real network', async function() {
+                    this.timeout(60000); // 60 seconds
+                    // This test relies on a transaction already existing on the network.
+                    // For a robust test, you might submit a transaction first and then try to fetch it.
+                    // For now, we'll assume a known, recently submitted transaction ID if available.
+                    // Or, if testing against devnet/testnet, you might use a known transaction ID from previous operations.
+                    console.log(`Attempting to fetch a transaction by ID on ${targetNetwork}...`);
+                    // IMPORTANT: Replace 'YOUR_KNOWN_TX_ID' with an actual transaction ID from your target network.
+                    // If you don't have one, you might need to run a submitCertificate test first and then use its TxID.
+                    const txIDToFetch = "0x..."; // Placeholder: Replace with a real TxID from devnet/testnet
+                    const startBlock = 0; // Or a relevant block number
+                    const endBlock = 1000; // Or a relevant block number range
+
+                    if (txIDToFetch === "0x...") {
+                        console.warn("Skipping live getTransactionbyID test: Please replace '0x...' with a real transaction ID from the target network.");
+                        this.skip(); // Skip this test if no real TxID is provided
+                        return;
+                    }
+
+                    const txResult = await liveAccount.getTransactionbyID(txIDToFetch, startBlock, endBlock);
+                    expect(txResult).to.not.be.null;
+                    expect(txResult.Result).to.equal(200);
+                    expect(txResult.Response).to.not.be.empty;
+                    console.log(`Transaction fetched: ${JSON.stringify(txResult)}`);
+                });
+
+                it('should fetch a transaction by block number and ID on real network', async function() {
+                    this.timeout(60000); // 60 seconds
+                    console.log(`Attempting to fetch a transaction by Block ID and TxID on ${targetNetwork}...`);
+                    // IMPORTANT: Replace 'YOUR_KNOWN_BLOCK_ID' and 'YOUR_KNOWN_TX_ID' with actual values.
+                    const blockIDToFetch = 1; // Placeholder: Replace with a real Block ID
+                    const txIDToFetch = "0x..."; // Placeholder: Replace with a real TxID
+
+                    if (txIDToFetch === "0x..." || blockIDToFetch === 1) {
+                        console.warn("Skipping live getTransaction test: Please replace placeholders with real Block ID and TxID from the target network.");
+                        this.skip();
+                        return;
+                    }
+
+                    const txResult = await liveAccount.getTransaction(blockIDToFetch, txIDToFetch);
+                    expect(txResult).to.not.be.null;
+                    expect(txResult.Result).to.equal(200);
+                    expect(txResult.Response).to.not.be.empty;
+                    console.log(`Transaction fetched: ${JSON.stringify(txResult)}`);
+                });
+
+                it('should correctly set the network and update NAG_URL on real network', async function() {
+                    this.timeout(30000); // 30 seconds for network setup
+                    console.log(`Testing setNetwork for '${targetNetwork}' on real network...`);
+                    const initialNAG_URL = liveAccount.NAG_URL;
+                    // Re-set the network to ensure the call goes through
+                    await liveAccount.setNetwork(targetNetwork);
+                    // Expect NAG_URL to be updated to a valid URL for the target network
+                    expect(liveAccount.NAG_URL).to.be.a('string').and.not.be.empty;
+                    expect(liveAccount.NAG_URL).to.not.equal(DEFAULT_NAG); // Should not be default NAG
+                    expect(liveAccount.NAG_URL).to.include(targetNetwork); // Should contain the network name in URL
+                    console.log(`NAG_URL successfully updated to: ${liveAccount.NAG_URL}`);
+                });
+
+                // You can add more tests here that interact with the live network
+            });
+        }
+
     });
 });
