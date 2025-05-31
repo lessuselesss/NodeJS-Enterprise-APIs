@@ -40,8 +40,10 @@
     "test:cjs": "mocha \"__tests__/cjs/**/*.cjs\""
   },
   "devDependencies": {
-    "@types/chai": "^5.2.2",
     "chai": "^5.2.0",
-    "mocha": "^11.5.0"
+    "chai-as-promised": "^8.0.1",
+    "mocha": "^11.5.0",
+    "nock": "^14.0.5",
+    "sinon": "^20.0.0"
   }
 }
