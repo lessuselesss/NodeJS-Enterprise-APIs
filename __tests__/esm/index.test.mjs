@@ -1,4 +1,4 @@
-// test/index.test.mjs
+// __test__/esm/index.test.mjs
 
 import * as chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
@@ -10,8 +10,8 @@ import { C_CERTIFICATE, CEP_Account } from '../../lib/index.js';
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-// Library's internal constants (for verification)
-const LIB_VERSION = '1.0.13'; // from your library
+// Library's internal constants (for verification) from lib/index.js
+const LIB_VERSION = '1.0.13'; 
 const DEFAULT_NAG_BASE_URL = 'https://nag.circularlabs.io';
 const DEFAULT_NAG_PATH = '/NAG.php?cep=';
 const DEFAULT_NAG = `${DEFAULT_NAG_BASE_URL}${DEFAULT_NAG_PATH}`;
@@ -69,6 +69,18 @@ describe('Circular ESM Enterprise APIs', () => {
             certificate.data = '0x';
             expect(certificate.getData()).to.equal('');
           });
+          
+          // To make this test pass, the stringToHex and hexToString functions in lib/index.js
+          // need to be updated to use Buffer.from for proper UTF-8 handling.
+          
+          it('should correctly retrieve multi-byte unicode data', () => {
+            const unicodeData = "你好世界 😊"; // Multi-byte Unicode characters
+            certificate.setData(unicodeData);
+            // This test will likely fail with the current stringToHex/hexToString implementation
+            // as it does not correctly handle multi-byte UTF-8 encoding.
+            // It expects the original string back.
+            expect(certificate.getData()).to.equal(unicodeData);
+          });
         });
 
         describe('getJSONCertificate()', () => {
@@ -115,7 +127,7 @@ describe('Circular ESM Enterprise APIs', () => {
         const mockAddress = testAccountAddress;
         const mockPrivateKey = testPrivateKey;
 
-        // These are for cleaning up the test outputs
+        // These are for cleaning up the test outputs due to the throws + logs in the library
         let originalConsoleError; // To store the original console.error
         let originalConsoleLog;   // To store the original console.log
         let capturedLogs;         // To store console messages logged during a test run
@@ -491,7 +503,7 @@ describe('Circular ESM Enterprise APIs', () => {
             });
         });
 
-        describe('GetTransactionOutcome()', () => {
+        describe('getTransactionOutcome()', () => {
             const txID = "pollTxID456"; // Common txID for these tests
             const shortTimeout = 3; // Default timeout for library function in these tests
 
