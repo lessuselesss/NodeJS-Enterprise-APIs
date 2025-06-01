@@ -28,14 +28,14 @@ const testPrivateKey = testKeyPair.getPrivate('hex');
 const testPublicKey = testKeyPair.getPublic('hex');
 const testAccountAddress = '0x' + sha256(testPublicKey).substring(0, 40);
 
-// Set the target network via an environment variable
+// Allow setting the target network via an environment variable
 // Example: "CIRCULAR_TEST_NETWORK=testnet mocha"
 const targetNetwork = process.env.CIRCULAR_TEST_NETWORK;
 
 // --- TEMPORARY HARDCODED NAG URLS FOR SPECIFIC NETWORKS ---
 // This is a placeholder object. 
 // 
-// Ideally, setNetwork() should fetch the correct URLs.
+// Ideally, setNetwork() should fetch the correct URLs,however it isn't currently.
 // Once the `getNAG` service is fixed for the testnet/devnet networks, its entry here should be removed or set to null.
 // Key: network name (e.g., 'testnet', 'devnet')
 // Value: The actual distinct NAG URL for that network, or null if no override is needed/known.
@@ -44,11 +44,6 @@ const HARDCODED_NAG_URLS = {
     'devnet': 'https://devnet-nag.circularlabs.io/API/',  // Replace null with 'https://actual-devnet-nag.circularlabs.io/API/' if known and needed
     // Add other networks here if they have similar issues and you know their correct distinct NAG URL.
 };
-// Example if you know the correct testnet URL and want to use it:
-// const HARDCODED_NAG_URLS = {
-//    'testnet': 'https://testnet-nag.circularlabs.io/API/',
-//    'devnet': null,
-// };
 
 describe('Circular ESM Enterprise APIs', () => {
 
@@ -70,7 +65,9 @@ describe('Circular ESM Enterprise APIs', () => {
           it('should store data as hex (using librarys stringToHex)', () => {
               const testData = "test data is a string";
               certificate.setData(testData);
+
               let expectedHex = '';
+              
               for (let i = 0; i < testData.length; i++) {
                 const hex = testData.charCodeAt(i).toString(16);
                 expectedHex += ('00' + hex).slice(-2);
@@ -82,7 +79,9 @@ describe('Circular ESM Enterprise APIs', () => {
         describe('getData()', () => {
           it('should retrieve original data for simple strings', () => {
             const originalData = "another test";
+
             certificate.setData(originalData);
+
             expect(certificate.getData()).to.equal(originalData);
           });
 
@@ -104,7 +103,9 @@ describe('Circular ESM Enterprise APIs', () => {
           // Buffer.from(hex, 'hex').toString('utf8') respectively.
           it('should correctly retrieve multi-byte unicode data (EXPECTED TO FAIL WITH CURRENT LIBRARY)', () => {
             const unicodeData = "你好世界 😊";
+
             certificate.setData(unicodeData);
+
             expect(certificate.getData()).to.equal(unicodeData);
           });
         });
@@ -112,20 +113,22 @@ describe('Circular ESM Enterprise APIs', () => {
         describe('getJSONCertificate()', () => {
           it('should return a valid JSON string', () => {
               const testData = "json test";
+              const jsonCert = certificate.getJSONCertificate();
+              const parsedCert = JSON.parse(jsonCert);
+
+              let expectedHexData = '';
+
               certificate.setData(testData);
               certificate.previousTxID = "tx123";
               certificate.previousBlock = "block456";
 
-              const jsonCert = certificate.getJSONCertificate();
-              expect(jsonCert).to.be.a('string');
-              const parsedCert = JSON.parse(jsonCert);
-
-              let expectedHexData = '';
+              
               for (let i = 0; i < testData.length; i++) {
                 const hex = testData.charCodeAt(i).toString(16);
                 expectedHexData += ('00' + hex).slice(-2);
               }
-
+              
+              expect(jsonCert).to.be.a('string');
               expect(parsedCert).to.deep.equal({
                   "data": expectedHexData,
                   "previousTxID": "tx123",
@@ -138,11 +141,13 @@ describe('Circular ESM Enterprise APIs', () => {
         describe('getCertificateSize()', () => {
           it('should return correct byte length', () => {
               const testData = "size test";
+              
+              let expectedHexData = '';
+
               certificate.setData(testData);
               certificate.previousTxID = "txIDForSize";
               certificate.previousBlock = "blockIDForSize";
 
-              let expectedHexData = '';
               for (let i = 0; i < testData.length; i++) {
                 const hex = testData.charCodeAt(i).toString(16);
                 expectedHexData += ('00' + hex).slice(-2);
@@ -162,10 +167,10 @@ describe('Circular ESM Enterprise APIs', () => {
     });
 
     describe('CEP_Account Class', () => {
-        let account;
         const mockAddress = testAccountAddress;
         const mockPrivateKey = testPrivateKey;
-
+        
+        let account;
         let originalConsoleError;
         let originalConsoleLog;
         let capturedLogs;
@@ -251,56 +256,63 @@ describe('Circular ESM Enterprise APIs', () => {
         describe('setNetwork()', () => {
             it('should update NAG_URL for "mainnet"', async () => {
                 const expectedNewUrl = "https://mainnet-nag.circularlabs.io/API/";
+
                 nock(NETWORK_INFO_URL_BASE)
                     .get(NETWORK_INFO_PATH)
                     .query({ network: 'mainnet' })
                     .reply(200, { status: 'success', url: expectedNewUrl });
                 await account.setNetwork('mainnet');
+                
                 expect(account.NAG_URL).to.equal(expectedNewUrl);
                 expect(nock.isDone()).to.be.true;
             });
 
             it('should update NAG_URL for "testnet"', async () => {
                 const expectedNewUrl = "https://testnet-nag.circularlabs.io/API/";
+
                 nock(NETWORK_INFO_URL_BASE)
                     .get(NETWORK_INFO_PATH)
                     .query({ network: 'testnet' })
                     .reply(200, { status: 'success', url: expectedNewUrl });
-
                 await account.setNetwork('testnet');
+
                 expect(account.NAG_URL).to.equal(expectedNewUrl);
                 expect(nock.isDone()).to.be.true;
             });
 
             it('should update NAG_URL for "devnet"', async () => {
                 const expectedNewUrl = "https://devnet-nag.circularlabs.io/API/";
+
                 nock(NETWORK_INFO_URL_BASE)
                     .get(NETWORK_INFO_PATH)
                     .query({ network: 'devnet' })
                     .reply(200, { status: 'success', url: expectedNewUrl });
-
                 await account.setNetwork('devnet');
+
                 expect(account.NAG_URL).to.equal(expectedNewUrl);
                 expect(nock.isDone()).to.be.true;
             });
 
             it('should throw an error if network request fails', async () => {
+
                 nock(NETWORK_INFO_URL_BASE)
                     .get(NETWORK_INFO_PATH)
                     .query({ network: 'brokennet' })
                     .reply(500, "Server Error");
-
                 await expect(account.setNetwork('brokennet')).to.be.rejectedWith(/HTTP error! status: 500/);
+                
                 expect(nock.isDone()).to.be.true;
             });
 
             it('should throw an error if API response indicates failure', async () => {
+
                 nock(NETWORK_INFO_URL_BASE)
                     .get(NETWORK_INFO_PATH)
                     .query({ network: 'failednet' })
                     .reply(200, { status: 'error', message: 'Invalid network specified' });
 
                 await expect(account.setNetwork('failednet')).to.be.rejectedWith(/Invalid network specified/);
+                
                 expect(nock.isDone()).to.be.true;
             });
         });
@@ -311,11 +323,13 @@ describe('Circular ESM Enterprise APIs', () => {
             });
             it('should update Nonce on successful API call', async () => {
                 const mockApiResponse = { Result: 200, Response: { Nonce: 5 } };
+                
                 nock(DEFAULT_NAG_BASE_URL)
                     .post(`${DEFAULT_NAG_PATH}Circular_GetWalletNonce_`)
                     .reply(200, mockApiResponse);
 
                 const result = await account.updateAccount();
+                
                 expect(result).to.be.true;
                 expect(account.Nonce).to.equal(6);
                 expect(nock.isDone()).to.be.true;
@@ -324,22 +338,27 @@ describe('Circular ESM Enterprise APIs', () => {
             it('should return false and not update Nonce on API error (Result != 200)', async () => {
                 const initialNonce = account.Nonce;
                 const mockApiResponse = { Result: 400, Message: "Bad Request" };
+                
                 nock(DEFAULT_NAG_BASE_URL)
                     .post(`${DEFAULT_NAG_PATH}Circular_GetWalletNonce_`)
                     .reply(200, mockApiResponse);
 
                 const result = await account.updateAccount();
+                
                 expect(result).to.be.false;
                 expect(account.Nonce).to.equal(initialNonce);
                 expect(nock.isDone()).to.be.true;
             });
+
              it('should return false on network error', async () => {
                 const initialNonce = account.Nonce;
+
                 nock(DEFAULT_NAG_BASE_URL)
                     .post(`${DEFAULT_NAG_PATH}Circular_GetWalletNonce_`)
                     .replyWithError('Network failure');
 
                 const result = await account.updateAccount();
+
                 expect(result).to.be.false;
                 expect(account.Nonce).to.equal(initialNonce);
                 expect(nock.isDone()).to.be.true;
@@ -353,11 +372,13 @@ describe('Circular ESM Enterprise APIs', () => {
             it('should return false if response is malformed (missing Nonce)', async () => {
                 const initialNonce = account.Nonce;
                 const mockApiResponse = { Result: 200, Response: { SomeOtherField: 5 } };
+
                 nock(DEFAULT_NAG_BASE_URL)
                     .post(`${DEFAULT_NAG_PATH}Circular_GetWalletNonce_`)
                     .reply(200, mockApiResponse);
 
                 const result = await account.updateAccount();
+
                 expect(result).to.be.false;
                 expect(account.Nonce).to.equal(initialNonce);
                 expect(nock.isDone()).to.be.true;
@@ -366,15 +387,17 @@ describe('Circular ESM Enterprise APIs', () => {
 
         describe('signData()', () => {
             it('should sign data correctly', () => {
-                account.open(mockAddress);
                 const dataToSign = "sample data for signing";
                 const signature = account.signData(dataToSign, mockPrivateKey);
+                
+                account.open(mockAddress);
 
                 expect(signature).to.be.a('string');
                 expect(signature.length).to.be.greaterThan(0);
 
                 const key = ec.keyFromPublic(testPublicKey.startsWith('0x') ? testPublicKey.slice(2) : testPublicKey, 'hex');
                 const msgHash = sha256(dataToSign);
+                
                 expect(key.verify(msgHash, signature)).to.be.true;
             });
 
@@ -382,18 +405,22 @@ describe('Circular ESM Enterprise APIs', () => {
                 expect(() => account.signData("data", mockPrivateKey)).to.throw("Account is not open");
             });
             it('should produce different signatures for different data', () => {
-                account.open(mockAddress);
                 const sig1 = account.signData("data1", mockPrivateKey);
                 const sig2 = account.signData("data2", mockPrivateKey);
+              
+                account.open(mockAddress);
+               
                 expect(sig1).to.not.equal(sig2);
             });
 
             it('should produce different signatures for different private keys', () => {
-                account.open(mockAddress);
                 const otherKeyPair = ec.genKeyPair();
                 const otherPrivateKey = otherKeyPair.getPrivate('hex');
                 const sig1 = account.signData("commondata", mockPrivateKey);
                 const sig2 = account.signData("commondata", otherPrivateKey);
+              
+                account.open(mockAddress);
+
                 expect(sig1).to.not.equal(sig2);
             });
         });
@@ -404,21 +431,25 @@ describe('Circular ESM Enterprise APIs', () => {
 
             it('getTransaction(BlockID, TxID) should fetch a transaction', async () => {
                 const mockResponse = { Result: 200, Response: { id: txID, status: "Confirmed" } };
+
                 nock(DEFAULT_NAG_BASE_URL)
                     .post(`${DEFAULT_NAG_PATH}Circular_GetTransactionbyID_`)
                     .reply(200, mockResponse);
 
                 const result = await account.getTransaction(blockNum, txID);
+
                 expect(result).to.deep.equal(mockResponse);
                 expect(nock.isDone()).to.be.true;
             });
 
             it('getTransaction(BlockID, TxID) should throw on network error', async () => {
+
                 nock(DEFAULT_NAG_BASE_URL)
                     .post(`${DEFAULT_NAG_PATH}Circular_GetTransactionbyID_`)
                     .replyWithError('Network failure');
 
                 await expect(account.getTransaction(blockNum, txID)).to.be.rejectedWith('Network failure');
+               
                 expect(nock.isDone()).to.be.true;
             });
 
@@ -440,19 +471,22 @@ describe('Circular ESM Enterprise APIs', () => {
                     .reply(200, mockResponse);
 
                 const result = await account.getTransactionbyID(txID, startBlock, endBlock);
+
                 expect(result).to.deep.equal(mockResponse);
                 expect(nock.isDone()).to.be.true;
             });
 
             it('getTransactionbyID should handle "Transaction Not Found"', async () => {
                 const mockResponse = { Result: 200, Response: "Transaction Not Found" };
+
                 nock(DEFAULT_NAG_BASE_URL)
                    .post(`${DEFAULT_NAG_PATH}Circular_GetTransactionbyID_`)
                    .reply(200, mockResponse);
 
-               const result = await account.getTransactionbyID(txID, 0, 10);
-               expect(result).to.deep.equal(mockResponse);
-               expect(nock.isDone()).to.be.true;
+                const result = await account.getTransactionbyID(txID, 0, 10);
+
+                expect(result).to.deep.equal(mockResponse);
+                expect(nock.isDone()).to.be.true;
            });
 
             it('getTransactionbyID should throw on network error', async () => {
@@ -493,11 +527,14 @@ describe('Circular ESM Enterprise APIs', () => {
                         expect(payloadObject.Action).to.equal("CP_CERTIFICATE");
 
                         let expectedPDataHex = '';
+
                         for (let i = 0; i < certData.length; i++) {
                             const hex = certData.charCodeAt(i).toString(16);
                             expectedPDataHex += ('00' + hex).slice(-2);
                         }
+                        
                         const dataHexInPayload = payloadObject.Data.startsWith('0x') ? payloadObject.Data.slice(2) : payloadObject.Data;
+                        
                         expect(dataHexInPayload).to.equal(expectedPDataHex);
 
                         return true;
@@ -505,16 +542,18 @@ describe('Circular ESM Enterprise APIs', () => {
                     .reply(200, mockApiResponse);
 
                 const result = await account.submitCertificate(certData, mockPrivateKey);
+
                 expect(result).to.deep.equal(mockApiResponse);
                 expect(nock.isDone()).to.be.true;
             });
 
             it('should return error object on network failure', async () => {
+                const result = await account.submitCertificate(certData, mockPrivateKey);
+
                 nock(DEFAULT_NAG_BASE_URL)
                    .post(`${DEFAULT_NAG_PATH}Circular_AddTransaction_`)
                    .replyWithError('Simulated network error');
 
-               const result = await account.submitCertificate(certData, mockPrivateKey);
                expect(result.success).to.be.false;
                expect(result.message).to.equal('Server unreachable or request failed');
                expect(result.error).to.contain('Simulated network error');
@@ -522,11 +561,11 @@ describe('Circular ESM Enterprise APIs', () => {
            });
 
             it('should return error object on HTTP error status', async () => {
+                const result = await account.submitCertificate(certData, mockPrivateKey);
                 nock(DEFAULT_NAG_BASE_URL)
                    .post(`${DEFAULT_NAG_PATH}Circular_AddTransaction_`)
                    .reply(500, { message: "Internal Server Error" });
 
-               const result = await account.submitCertificate(certData, mockPrivateKey);
                expect(result.success).to.be.false;
                expect(result.message).to.equal('Server unreachable or request failed');
                expect(result.error).to.match(/Error: Network response was not ok/i);
@@ -541,8 +580,9 @@ describe('Circular ESM Enterprise APIs', () => {
         });
 
         describe('getTransactionOutcome()', () => {
-             const txID = "pollTxID456";
+            const txID = "pollTxID456";
             const shortTimeout = 3;
+
             let specificBodyMatcher;
 
             beforeEach(() => {
@@ -559,21 +599,27 @@ describe('Circular ESM Enterprise APIs', () => {
             });
 
             it('should resolve with transaction data if found and confirmed quickly', async function() {
-                this.timeout((shortTimeout * 1000) + 2000);
                 const confirmedResponsePayload = { id: txID, Status: "Confirmed", data: "some data" };
                 const confirmedResponse = { Result: 200, Response: confirmedResponsePayload };
+                const outcome = await account.GetTransactionOutcome(txID, shortTimeout);
+                
+                this.timeout((shortTimeout * 1000) + 2000);
+
                 nock(DEFAULT_NAG_BASE_URL)
                     .post(`${DEFAULT_NAG_PATH}Circular_GetTransactionbyID_`, specificBodyMatcher)
                     .reply(200, confirmedResponse);
-                const outcome = await account.GetTransactionOutcome(txID, shortTimeout);
+
                 expect(outcome).to.deep.equal(confirmedResponsePayload);
             });
 
             it('should poll and resolve when transaction is confirmed after being pending', async function() {
-                this.timeout((shortTimeout * 1000) + 4000);
                 const pendingResponse = { Result: 200, Response: { id: txID, Status: "Pending" } };
                 const confirmedResponsePayload = { id: txID, Status: "Confirmed", finalData: "final" };
                 const confirmedResponse = { Result: 200, Response: confirmedResponsePayload };
+                const outcome = await account.GetTransactionOutcome(txID, shortTimeout + 2);
+               
+                this.timeout((shortTimeout * 1000) + 4000);
+               
                 nock(DEFAULT_NAG_BASE_URL)
                     .post(`${DEFAULT_NAG_PATH}Circular_GetTransactionbyID_`, specificBodyMatcher)
                     .reply(200, pendingResponse)
@@ -581,39 +627,45 @@ describe('Circular ESM Enterprise APIs', () => {
                     .reply(200, pendingResponse)
                     .post(`${DEFAULT_NAG_PATH}Circular_GetTransactionbyID_`, specificBodyMatcher)
                     .reply(200, confirmedResponse);
-                const outcome = await account.GetTransactionOutcome(txID, shortTimeout + 2);
+
                 expect(outcome).to.deep.equal(confirmedResponsePayload);
             });
 
             it('should poll and resolve when transaction is confirmed after "Transaction Not Found"', async function() {
-                this.timeout(5000);
                 const notFoundResponse = { Result: 200, Response: "Transaction Not Found" };
                 const confirmedResponsePayload = { id: txID, Status: "Confirmed", finalData: "final" };
                 const confirmedResponse = { Result: 200, Response: confirmedResponsePayload };
+                const outcome = await account.GetTransactionOutcome(txID, shortTimeout);
+                
+                this.timeout(5000);
+                
                 nock(DEFAULT_NAG_BASE_URL)
                     .post(`${DEFAULT_NAG_PATH}Circular_GetTransactionbyID_`, specificBodyMatcher)
                     .reply(200, notFoundResponse)
                     .post(`${DEFAULT_NAG_PATH}Circular_GetTransactionbyID_`, specificBodyMatcher)
                     .reply(200, confirmedResponse);
-                const outcome = await account.GetTransactionOutcome(txID, shortTimeout);
-                expect(outcome).to.deep.equal(confirmedResponsePayload);
+                
+                    expect(outcome).to.deep.equal(confirmedResponsePayload);
             });
 
             it('should reject if getTransactionbyID call fails during polling', async () => {
                 nock(DEFAULT_NAG_BASE_URL)
                     .post(`${DEFAULT_NAG_PATH}Circular_GetTransactionbyID_`, specificBodyMatcher)
                     .replyWithError('Network connection lost');
-                await expect(account.GetTransactionOutcome(txID, shortTimeout)).to.be.rejectedWith('Network connection lost');
+                
+                    await expect(account.GetTransactionOutcome(txID, shortTimeout)).to.be.rejectedWith('Network connection lost');
             });
 
             it('should reject with "Timeout exceeded" if polling duration exceeds timeoutSec', async function() {
-                this.timeout(5000);
                 const pendingResponse = { Result: 200, Response: { id: txID, Status: "Pending" } };
+               
+                this.timeout(5000);
                 nock(DEFAULT_NAG_BASE_URL)
                     .post(`${DEFAULT_NAG_PATH}Circular_GetTransactionbyID_`, specificBodyMatcher)
                     .times(Infinity)
                     .reply(200, pendingResponse);
-                await expect(account.GetTransactionOutcome(txID, 1)).to.be.rejectedWith('Timeout exceeded');
+                
+                  await expect(account.GetTransactionOutcome(txID, 1)).to.be.rejectedWith('Timeout exceeded');
             });
         });
 
@@ -685,6 +737,7 @@ describe('Circular ESM Enterprise APIs', () => {
 
                 it('should update account nonce on real network', async () => {
                     const success = await liveAccount.updateAccount();
+
                     expect(success, `updateAccount failed for '${targetNetwork}'. NAG_URL was: ${liveAccount.NAG_URL}. Check if this is the correct NAG.`).to.be.true;
                     expect(liveAccount.Nonce).to.be.greaterThan(0);
                 });
@@ -704,19 +757,22 @@ describe('Circular ESM Enterprise APIs', () => {
                     const submitResult = await liveAccount.submitCertificate(certData, privateKey);
 
                     const expectedApiSuccessCode = 200; // Adjust if API uses different success code
+
                     expect(submitResult.Result, `Submission failed for '${targetNetwork}'. API Result: ${submitResult.Result}, Response: "${submitResult.Response}", TxID: "${submitResult.TxID}". NAG_URL was: ${liveAccount.NAG_URL}.`).to.equal(expectedApiSuccessCode);
                     expect(submitResult.TxID).to.be.a('string').and.not.be.empty;
                     console.log(`Certificate submitted to '${targetNetwork}'. TxID: ${submitResult.TxID}. Waiting for outcome...`);
 
                     const txID = submitResult.TxID;
                     const outcomeTimeout = 60; // seconds
-
                     const outcome = await liveAccount.GetTransactionOutcome(txID, outcomeTimeout);
+                    
                     expect(outcome).to.not.be.null;
                     expect(outcome.Status).to.equal('Confirmed');
+                    
                     // The API might return the TxID without '0x', so clean the original for comparison if needed
                     const cleanedOriginalTxID = txID.startsWith('0x') ? txID.slice(2) : txID;
                     const cleanedOutcomeTxID = outcome.id && outcome.id.startsWith('0x') ? outcome.id.slice(2) : outcome.id;
+                   
                     expect(cleanedOutcomeTxID).to.equal(cleanedOriginalTxID);
                     console.log(`Transaction outcome confirmed for TxID: ${txID} on '${targetNetwork}'`);
                 });
@@ -737,6 +793,7 @@ describe('Circular ESM Enterprise APIs', () => {
                     }
 
                     const txResult = await liveAccount.getTransactionbyID(txIDToFetch, startBlock, endBlock);
+                   
                     expect(txResult).to.not.be.null;
                     expect(txResult.Result).to.equal(200);
                     expect(txResult.Response).to.not.be.empty;
@@ -746,6 +803,7 @@ describe('Circular ESM Enterprise APIs', () => {
                     } else {
                         const expectedTxId = txIDToFetch.startsWith('0x') ? txIDToFetch.slice(2) : txIDToFetch;
                         const actualTxId = txResult.Response.id && txResult.Response.id.startsWith('0x') ? txResult.Response.id.slice(2) : txResult.Response.id;
+                        
                         expect(actualTxId).to.equal(expectedTxId);
                         console.log(`Transaction fetched from '${targetNetwork}': ${JSON.stringify(txResult.Response)}`);
                     }
@@ -766,6 +824,7 @@ describe('Circular ESM Enterprise APIs', () => {
                     }
 
                     const txResult = await liveAccount.getTransaction(blockIDToFetch, txIDToFetchInBlock);
+                    
                     expect(txResult).to.not.be.null;
                     expect(txResult.Result).to.equal(200);
                     expect(txResult.Response).to.not.be.empty;
@@ -786,6 +845,7 @@ describe('Circular ESM Enterprise APIs', () => {
 
                     const hardcodedUrlForTarget = HARDCODED_NAG_URLS[targetNetwork];
                     const urlFromSetNetwork = new CEP_Account(); // Create a fresh account to see what setNetwork *would* do
+                   
                     try {
                         await urlFromSetNetwork.setNetwork(targetNetwork);
                     } catch (e) {/* ignore error for this check */}
