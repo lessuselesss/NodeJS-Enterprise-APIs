@@ -62,10 +62,11 @@ describe('Circular ESM Enterprise APIs', () => {
         });
 
         describe('setData()', () => {
-          it('should store data as hex (using librarys stringToHex)', () => {
+          it('should store data as hex (using libs stringToHex)', () => {
               const testData = "test data is a string";
               certificate.setData(testData);
-
+              
+              // Replicates the logic from the lib's stringToHex Helper Function
               let expectedHex = '';
               
               for (let i = 0; i < testData.length; i++) {
@@ -231,6 +232,7 @@ describe('Circular ESM Enterprise APIs', () => {
         describe('close()', () => {
             it('should reset account properties to defaults', () => {
                 account.close();
+
                 expect(account.address).to.be.null;
                 expect(account.publicKey).to.be.null;
                 expect(account.info).to.be.null;
@@ -248,7 +250,9 @@ describe('Circular ESM Enterprise APIs', () => {
         describe('setBlockchain()', () => {
             it('should update the blockchain property', () => {
                 const newChain = "0xmynewchain";
+
                 account.setBlockchain(newChain);
+
                 expect(account.blockchain).to.equal(newChain);
             });
         });

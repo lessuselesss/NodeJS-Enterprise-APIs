@@ -35,11 +35,17 @@
     }
   },
   "scripts": {
-    "test": "echo 'Use npm run test:esm or npm run test:cjs'",
-    "test:esm": "mocha \"__tests__/esm/**/*.mjs\"",
-    "test:cjs": "mocha \"__tests__/cjs/**/*.cjs\""
+    "test:esm": "mocha --require @babel/register --timeout 50000 --full-trace __tests__/esm/**/*.mjs",
+    "test:esm:testnet": "CIRCULAR_TEST_NETWORK=testnet mocha --require @babel/register --timeout 150000 --full-trace __tests__/esm/**/*.mjs",
+    "test:esm:devnet": "CIRCULAR_TEST_NETWORK=devnet mocha --require @babel/register --timeout 150000 --full-trace __tests__/esm/**/*.mjs",
+    "test:cjs": "mocha --require @babel/register --timeout 50000 --full-trace __tests__/cjs/**/*.cjs",
+    "test:cjs:testnet": "CIRCULAR_TEST_NETWORK=testnet mocha --require @babel/register --timeout 150000 --full-trace __tests__/cjs/**/*.cjs",
+    "test:cjs:devnet": "CIRCULAR_TEST_NETWORK=testnet mocha --require @babel/register --timeout 150000 --full-trace __tests__/cjs/**/*.cjs"
+
   },
   "devDependencies": {
+    "@babel/core": "^7.27.4",
+    "@babel/register": "^7.27.1",
     "chai": "^5.2.0",
     "chai-as-promised": "^8.0.1",
     "mocha": "^11.5.0",

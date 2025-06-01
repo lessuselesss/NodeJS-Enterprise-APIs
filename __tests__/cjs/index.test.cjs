@@ -332,6 +332,7 @@ describe('Circular ESM Enterprise APIs', () => {
             beforeEach(() => {
                 account.open(mockAddress);
             });
+
             it('should update Nonce on successful API call', async () => {
                 const mockApiResponse = { Result: 200, Response: { Nonce: 5 } };
 
@@ -359,6 +360,7 @@ describe('Circular ESM Enterprise APIs', () => {
                 expect(account.Nonce).to.equal(initialNonce);
                 expect(nock.isDone()).to.be.true;
             });
+
              it('should return false on network error', async () => {
                 const initialNonce = account.Nonce;
                 const result = await account.updateAccount();
@@ -393,6 +395,7 @@ describe('Circular ESM Enterprise APIs', () => {
         });
 
         describe('signData()', () => {
+
             it('should sign data correctly', () => {
                 account.open(mockAddress);
                 const dataToSign = "sample data for signing";
@@ -410,6 +413,7 @@ describe('Circular ESM Enterprise APIs', () => {
             it('should throw an error if account is not open', () => {
                 expect(() => account.signData("data", mockPrivateKey)).to.throw("Account is not open");
             });
+            
             it('should produce different signatures for different data', () => {
                 account.open(mockAddress);
                 const sig1 = account.signData("data1", mockPrivateKey);
