@@ -9,7 +9,7 @@ import { C_CERTIFICATE, CEP_Account } from '../../lib/index.js';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
-
+// testing ci commit workflow -- remove after
 // Library's internal constants (for verification) from lib/index.js
 const LIB_VERSION = '1.0.13';
 const DEFAULT_NAG_BASE_URL = 'https://nag.circularlabs.io';
