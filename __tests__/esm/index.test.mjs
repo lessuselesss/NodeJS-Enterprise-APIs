@@ -41,17 +41,12 @@ const EC = elliptic.ec;
 const ec = new EC('secp256k1');
 let testPrivateKey, testPublicKey, testAccountAddress;
 
-if (TESTNET_PUBKEY && TESTNET_PVTKEY) {
-    testPrivateKey = TESTNET_PVTKEY;
-    testPublicKey = TESTNET_PUBKEY;
-    testAccountAddress = requireEnv('TESTNET_CIRCULAR_MAIN_PUBLIC_CHAIN_ADDRESS');
-} else {
-    const testKeyPair = ec.genKeyPair();
-    testPrivateKey = testKeyPair.getPrivate('hex');
-    testPublicKey = testKeyPair.getPublic('hex');
-    testAccountAddress = '0x' + sha256(testPublicKey).substring(0, 40);
-    console.warn('Using generated test keys. Set TESTNET_CIRCULAR_MAIN_PUBLIC_ACCOUNT_PUBKEY and PVTKEY in your .env for real network tests.');
-}
+// Ensure that TESTNET_PUBKEY and TESTNET_PVTKEY are always present.
+// If they are missing or placeholders, requireEnv will throw,
+// failing the tests early as desired for a permissioned network.
+testPublicKey = requireEnv('TESTNET_CIRCULAR_MAIN_PUBLIC_ACCOUNT_PUBKEY');
+testPrivateKey = requireEnv('TESTNET_CIRCULAR_MAIN_PUBLIC_ACCOUNT_PVTKEY');
+testAccountAddress = requireEnv('TESTNET_CIRCULAR_MAIN_PUBLIC_CHAIN_ADDRESS'); // Ensure this is also required
 
 // Allow setting the target network via an environment variable
 // Example: "CIRCULAR_TEST_NETWORK=testnet mocha"
@@ -138,7 +133,7 @@ describe('Circular ESM Enterprise APIs', () => {
           // The stringToHex and hexToString functions do not correctly handle multi-byte UTF-8.
           // They should be updated to use Buffer.from(str, 'utf8').toString('hex') and
           // Buffer.from(hex, 'hex').toString('utf8') respectively.
-          it('should correctly retrieve multi-byte unicode data (EXPECTED TO FAIL WITH CURRENT LIBRARY)', () => {
+          it('should correctly retrieve multi-byte unicode data', () => {
             const unicodeData = "你好世界 😊";
             certificate.setData(unicodeData);
             expect(certificate.getData()).to.equal(unicodeData);
@@ -244,6 +239,61 @@ describe('Circular ESM Enterprise APIs', () => {
             expect(account.Nonce).to.equal(0);
             expect(account.data).to.deep.equal({});
             expect(account.intervalSec).to.equal(2);
+        });
+
+        describe('Non-Permissioned Account Behavior', () => {
+            let unpermissionedAccount;
+            let unpermissionedPrivateKey;
+            let unpermissionedPublicKey;
+            let unpermissionedAddress;
+
+            beforeEach(() => {
+                unpermissionedAccount = new CEP_Account();
+                // Generate a new, unpermissioned key pair for each test
+                const unpermissionedKeyPair = ec.genKeyPair();
+                unpermissionedPrivateKey = unpermissionedKeyPair.getPrivate('hex');
+                unpermissionedPublicKey = unpermissionedKeyPair.getPublic('hex');
+                unpermissionedAddress = '0x' + sha256(unpermissionedPublicKey).substring(0, 40);
+
+                unpermissionedAccount.open(unpermissionedAddress);
+
+                // Ensure nock is active for these tests
+                if (!nock.isActive()) nock.activate();
+                nock.cleanAll();
+            });
+
+            afterEach(() => {
+                nock.cleanAll();
+                nock.restore();
+            });
+
+            it('should not update account nonce for a non-permissioned address', async () => {
+                // Mock a response indicating the address is not found or unauthorized
+                nock(DEFAULT_NAG_BASE_URL)
+                    .post(`${DEFAULT_NAG_PATH}Circular_GetWalletNonce_`)
+                    .reply(200, { Result: 401, Response: { Message: "Unauthorized Account" } });
+
+                const result = await unpermissionedAccount.updateAccount();
+                // updateAccount returns false if Result is not 200 or Nonce is missing
+                expect(result).to.be.false;
+                expect(unpermissionedAccount.Nonce).to.equal(0); // Nonce should not be updated
+                expect(nock.isDone()).to.be.true;
+            });
+
+            it('should not allow submitting a certificate from a non-permissioned account', async () => {
+                const certData = "unpermissioned test data";
+
+                // Mock a response indicating submission failure due to permissions
+                nock(DEFAULT_NAG_BASE_URL)
+                    .post(`${DEFAULT_NAG_PATH}Circular_AddTransaction_`)
+                    .reply(200, { Result: 403, Response: "Forbidden: Account not permissioned" });
+
+                const submitResult = await unpermissionedAccount.submitCertificate(certData, unpermissionedPrivateKey);
+                // submitCertificate returns the json response if HTTP status is 200, even if API result is an error
+                expect(submitResult.Result).to.equal(403);
+                expect(submitResult.Response).to.equal("Forbidden: Account not permissioned");
+                expect(nock.isDone()).to.be.true;
+            });
         });
 
         describe('open()', () => {
