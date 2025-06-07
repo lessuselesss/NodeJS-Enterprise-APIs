@@ -26,10 +26,19 @@ const NETWORK_INFO_PATH = '/network/getNAG';
 // Helper to generate a test key pair
 const EC = elliptic.ec;
 const ec = new EC('secp256k1');
-const testKeyPair = ec.genKeyPair();
-const testPrivateKey = testKeyPair.getPrivate('hex');
-const testPublicKey = testKeyPair.getPublic('hex');
-const testAccountAddress = '0x' + sha256(testPublicKey).substring(0, 40);
+let testPrivateKey, testPublicKey, testAccountAddress;
+
+if (process.env.TESTNET_CIRCULAR_MAIN_PUBLIC_ACCOUNT_PUBKEY && process.env.TESTNET_CIRCULAR_MAIN_PUBLIC_ACCOUNT_PVTKEY) {
+    testPrivateKey = process.env.TESTNET_CIRCULAR_MAIN_PUBLIC_ACCOUNT_PVTKEY;
+    testPublicKey = process.env.TESTNET_CIRCULAR_MAIN_PUBLIC_ACCOUNT_PUBKEY;
+    testAccountAddress = process.env.TESTNET_CIRCULAR_MAIN_PUBLIC_CHAIN_ADDRESS;
+} else {
+    const testKeyPair = ec.genKeyPair();
+    testPrivateKey = testKeyPair.getPrivate('hex');
+    testPublicKey = testKeyPair.getPublic('hex');
+    testAccountAddress = '0x' + sha256(testPublicKey).substring(0, 40);
+    console.warn('Using generated test keys. Set TESTNET_CIRCULAR_MAIN_PUBLIC_ACCOUNT_PUBKEY and PVTKEY in your .env for real network tests.');
+}
 
 // Set the target network via an environment variable
 // Example: "CIRCULAR_TEST_NETWORK=testnet mocha"

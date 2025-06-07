@@ -1,5 +1,5 @@
 // __test__/esm/index.test.mjs
-
+import dotenv from 'dotenv';
 import * as chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import nock from 'nock';
@@ -7,8 +7,25 @@ import elliptic from 'elliptic';
 import sha256 from 'sha256';
 import { C_CERTIFICATE, CEP_Account } from '../../lib/index.js';
 
+dotenv.config({ path: process.env.CIRCULAR_ENV_PATH || '.env' }); // Allow override for CI
 chai.use(chaiAsPromised);
 const { expect } = chai;
+
+// Helper to get required env variable or throw
+function requireEnv(name) {
+    const value = process.env[name];
+    if (!value || value.startsWith('<')) {
+        throw new Error(`Missing or placeholder value for required env variable: ${name}`);
+    }
+    return value;
+}
+
+// Use env for test keys and addresses
+const TESTNET_CHAIN = process.env.TESTNET_CIRCULAR_MAIN_PUBLIC_CHAIN_ADDRESS || process.env.MAIN_PUBLIC_CHAIN;
+const TESTNET_PUBKEY = process.env.TESTNET_CIRCULAR_MAIN_PUBLIC_ACCOUNT_PUBKEY;
+const TESTNET_PVTKEY = process.env.TESTNET_CIRCULAR_MAIN_PUBLIC_ACCOUNT_PVTKEY;
+const TESTNET_SEED = process.env.TESTNET_CIRCULAR_MAIN_PUBLIC_ACCOUNT_SEED;
+
 // testing ci commit workflow -- remove after
 // Library's internal constants (for verification) from lib/index.js
 const LIB_VERSION = '1.0.13';
@@ -19,14 +36,22 @@ const DEFAULT_CHAIN = '0x8a20baa40c45dc5055aeb26197c203e576ef389d9acb171bd62da11
 const NETWORK_INFO_URL_BASE = 'https://circularlabs.io';
 const NETWORK_INFO_PATH = '/network/getNAG';
 
-
 // Helper to generate a test key pair
 const EC = elliptic.ec;
 const ec = new EC('secp256k1');
-const testKeyPair = ec.genKeyPair();
-const testPrivateKey = testKeyPair.getPrivate('hex');
-const testPublicKey = testKeyPair.getPublic('hex');
-const testAccountAddress = '0x' + sha256(testPublicKey).substring(0, 40);
+let testPrivateKey, testPublicKey, testAccountAddress;
+
+if (TESTNET_PUBKEY && TESTNET_PVTKEY) {
+    testPrivateKey = TESTNET_PVTKEY;
+    testPublicKey = TESTNET_PUBKEY;
+    testAccountAddress = requireEnv('TESTNET_CIRCULAR_MAIN_PUBLIC_CHAIN_ADDRESS');
+} else {
+    const testKeyPair = ec.genKeyPair();
+    testPrivateKey = testKeyPair.getPrivate('hex');
+    testPublicKey = testKeyPair.getPublic('hex');
+    testAccountAddress = '0x' + sha256(testPublicKey).substring(0, 40);
+    console.warn('Using generated test keys. Set TESTNET_CIRCULAR_MAIN_PUBLIC_ACCOUNT_PUBKEY and PVTKEY in your .env for real network tests.');
+}
 
 // Allow setting the target network via an environment variable
 // Example: "CIRCULAR_TEST_NETWORK=testnet mocha"
@@ -46,6 +71,22 @@ const HARDCODED_NAG_URLS = {
 };
 
 describe('Circular ESM Enterprise APIs', () => {
+
+    describe('Environment Variable Setup', () => {
+        it('should have all required env variables for testnet', () => {
+            // List all required env vars for your tests
+            const requiredVars = [
+                'TESTNET_CIRCULAR_MAIN_PUBLIC_CHAIN_ADDRESS',
+                'TESTNET_CIRCULAR_MAIN_PUBLIC_ACCOUNT_PUBKEY',
+                'TESTNET_CIRCULAR_MAIN_PUBLIC_ACCOUNT_PVTKEY',
+                'TESTNET_CIRCULAR_MAIN_PUBLIC_ACCOUNT_SEED'
+            ];
+            requiredVars.forEach(name => {
+                expect(process.env[name], `Missing env var: ${name}`).to.exist;
+                expect(process.env[name]).to.not.match(/^<.*>$/, `Env var ${name} is still a placeholder`);
+            });
+        });
+    });
 
     describe('C_CERTIFICATE Class', () => {
         let certificate;

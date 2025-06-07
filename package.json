@@ -41,13 +41,13 @@
     "test:cjs": "mocha --require @babel/register --timeout 50000 --full-trace __tests__/cjs/**/*.cjs",
     "test:cjs:testnet": "CIRCULAR_TEST_NETWORK=testnet mocha --require @babel/register --timeout 150000 --full-trace __tests__/cjs/**/*.cjs",
     "test:cjs:devnet": "CIRCULAR_TEST_NETWORK=testnet mocha --require @babel/register --timeout 150000 --full-trace __tests__/cjs/**/*.cjs"
-
   },
   "devDependencies": {
     "@babel/core": "^7.27.4",
     "@babel/register": "^7.27.1",
     "chai": "^5.2.0",
     "chai-as-promised": "^8.0.1",
+    "dotenv": "^16.5.0",
     "mocha": "^11.5.0",
     "nock": "^14.0.5",
     "sinon": "^20.0.0"
